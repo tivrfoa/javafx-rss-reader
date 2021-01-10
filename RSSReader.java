@@ -89,7 +89,7 @@ public class RSSReader extends Application {
 	
 	private void addFeedToFile(String url) {
 		try (FileWriter fw = new FileWriter(".myfeed", true)) {
-			fw.write("\r\n" + url);
+			fw.write(url + "\n");
 		} catch (Exception e) { e.printStackTrace(); }
 	}
 	

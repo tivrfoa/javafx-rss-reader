@@ -33,6 +33,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
@@ -44,6 +46,7 @@ public class RSSReader extends Application {
 	WebView webView;
 	List<Post> posts = new ArrayList<>();
 	GridPane menu = new GridPane();
+	TextField feedInput = new TextField();;
 	
 	public void start(Stage primaryStage) {
         primaryStage.setTitle("JavaFX WebView Example");
@@ -70,15 +73,19 @@ public class RSSReader extends Application {
 	
 	private FlowPane getAddFeedPane() {
 		Label addLabel = new Label("Add feed:");
-		TextField feedInput = new TextField();
 		feedInput.setPrefColumnCount(60);
+		feedInput.setOnKeyPressed(ke -> handleNewFeed(ke));
 		Button addButton = new Button("ADD");
-		addButton.setOnAction(action -> {
+		addButton.setOnAction(action -> handleNewFeed(null));
+		return new FlowPane(addLabel, feedInput, addButton);
+	}
+
+	private void handleNewFeed(KeyEvent ke) {
+		if (ke == null || ke.getCode().equals(KeyCode.ENTER)) {
 			addFeedToFile(feedInput.getText());
 			loadFeed(feedInput.getText());
 			feedInput.setText("");
-		});
-		return new FlowPane(addLabel, feedInput, addButton);
+		}
 	}
 	
 	private void addFeedToFile(String url) {
@@ -88,6 +95,7 @@ public class RSSReader extends Application {
 	}
 	
 	private void loadFeed() {
+		menu.getChildren().clear();
 		posts.sort(Comparator.comparing(Post::getDate).reversed());
 		for (var post : posts) menu.addColumn(0, post.linkToContent);
 	}

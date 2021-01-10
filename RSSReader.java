@@ -49,7 +49,7 @@ public class RSSReader extends Application {
         primaryStage.setTitle("JavaFX WebView Example");
         webView = new WebView();
 		
-		try (Scanner sc = new Scanner(new File(".myFeed"))) {
+		try (Scanner sc = new Scanner(new File(".myfeed"))) {
 			while (sc.hasNextLine()) posts.addAll(fetchFeed(sc.nextLine()));
 			loadFeed();
 		} catch (Exception e) { e.printStackTrace(); }

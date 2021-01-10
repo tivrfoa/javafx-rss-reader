@@ -4,6 +4,7 @@ http://tutorials.jenkov.com/javafx/webview.html
 https://docs.oracle.com/javase/8/javafx/api/javafx/scene/web/WebEngine.html
 https://docs.oracle.com/javase/8/javafx/api/javafx/scene/layout/GridPane.html
 https://github.com/rometools/rome
+https://docs.oracle.com/javafx/2/text/jfxpub-text.htm
 */
 
 //DEPS org.openjfx:javafx-controls:15.0.1:${os.detected.jfxname}
@@ -26,6 +27,8 @@ import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 
 import javafx.application.Application;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
@@ -38,7 +41,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
+import javafx.scene.web.WebHistory.Entry;
 import javafx.stage.Stage;
 
 public class RSSReader extends Application {
@@ -49,6 +56,8 @@ public class RSSReader extends Application {
 	TextField feedInput = new TextField();
 	FlowPane postHeader = new FlowPane();
 	Label postHeaderLabel = new Label("Site - Title - Date");
+	Post currentPost;
+	boolean isShowingFeedPost;
 	
 	@Override
 	public void start(Stage primaryStage) {
@@ -62,6 +71,10 @@ public class RSSReader extends Application {
 		ScrollPane scrollMenu = new ScrollPane();
 		scrollMenu.setContent(menu);
 
+		postHeaderLabel.setPadding(new Insets(10, 10, 10, 10));
+		postHeaderLabel.setFont(Font.font("Verdana", FontWeight.BOLD, 16));
+
+		postHeader.minHeight(100);
 		postHeader.getChildren().add(postHeaderLabel);
 		VBox postView = new VBox(postHeader, webView);
 		
@@ -82,7 +95,45 @@ public class RSSReader extends Application {
 		feedInput.setOnKeyPressed(ke -> handleNewFeed(ke));
 		Button addButton = new Button("ADD");
 		addButton.setOnAction(action -> handleNewFeed(null));
-		return new FlowPane(addLabel, feedInput, addButton);
+		Button previousPage = new Button(" Previous Page < ");
+		previousPage.setOnAction(a -> handlePreviousPage());
+		Button nextPage = new Button(" > Next Page");
+		nextPage.setOnAction(a -> handleNextPage());
+		return new FlowPane(addLabel, feedInput, addButton, previousPage, nextPage);
+	}
+
+	private void handlePreviousPage() {
+		WebHistory webHistory = webView.getEngine().getHistory();
+		assert debugHistory(webHistory);
+		if (webHistory.getEntries().size() == 0) return;
+		if (webHistory.getCurrentIndex() == 0) {
+			showPost();
+		} else {
+			webHistory.go(-1);
+		}
+	}
+
+	private void handleNextPage() {
+		WebHistory webHistory = webView.getEngine().getHistory();
+		assert debugHistory(webHistory);
+		ObservableList<Entry> entries = webHistory.getEntries();
+		if (webHistory.getCurrentIndex() + 1 >= entries.size()) return;
+		if (isShowingFeedPost) {
+			isShowingFeedPost = false;
+			webView.getEngine().load(entries.get(0).getUrl());
+		} else {
+			webHistory.go(1);
+		}
+	}
+
+	private boolean debugHistory(WebHistory history) {
+		System.out.println("history.getCurrentIndex() = " + history.getCurrentIndex());
+		System.out.println("history.getEntries().size() = " + history.getEntries().size());
+		ObservableList<Entry> entries = history.getEntries();
+		for (var e : entries) {
+			System.out.println(e);
+		}
+		return true;
 	}
 
 	private void handleNewFeed(KeyEvent ke) {
@@ -148,13 +199,20 @@ public class RSSReader extends Application {
 		
 		return listPost;
 	}
-	
-	private void showPost(Post post) {
-		updatePostHeader(post);
-		updateWebView(post.content);
+
+	private void showPost() {
+		if (currentPost == null) return;
+		isShowingFeedPost = true;
+		updatePostHeader(currentPost);
+		updateWebView(currentPost.content);
 	}
 	
-	private void updatePostHeader(RSSReader.Post post) {
+	private void showPost(Post post) {
+		currentPost = post;
+		showPost();
+	}
+	
+	private void updatePostHeader(Post post) {
 		postHeaderLabel.setText(post.siteTitle + " - " + post.postTitle + " - " + post.date);
 	}
 

@@ -11,8 +11,6 @@ https://github.com/rometools/rome
 //DEPS org.openjfx:javafx-web:15.0.1:${os.detected.jfxname}
 //DEPS com.rometools:rome:1.15.0
 
-package rssreader;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.net.URL;
@@ -22,19 +20,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
-import com.rometools.rome.feed.synd.SyndCategory;
-import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
-import com.rometools.rome.feed.synd.SyndLink;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.web.WebView;
-import javafx.stage.Stage;
-
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
@@ -44,6 +36,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
 
 public class RSSReader extends Application {
 	
@@ -95,7 +89,7 @@ public class RSSReader extends Application {
 	
 	private void loadFeed() {
 		posts.sort(Comparator.comparing(Post::getDate).reversed());
-		for (var post : posts) menu.addColumn(0, new FlowPane(post.linkToContent));
+		for (var post : posts) menu.addColumn(0, post.linkToContent);
 	}
 	private void loadFeed(String url) {
 		posts.addAll(fetchFeed(url));
@@ -120,10 +114,10 @@ public class RSSReader extends Application {
 			
             // Get the entry items...
             for (SyndEntry entry : (List<SyndEntry>) feed.getEntries()) {
+				if (entry.getContents().size() == 0) break;
 				Post post = new Post();
 				post.siteTitle = feed.getTitle();
 				post.postTitle = entry.getTitle();
-				if (entry.getContents().size() == 0) break;
 				post.content = entry.getContents().get(0).getValue();
 				Date date = entry.getUpdatedDate();
 				if (date == null) date = entry.getPublishedDate();

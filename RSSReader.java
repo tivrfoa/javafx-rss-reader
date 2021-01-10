@@ -43,14 +43,16 @@ import javafx.stage.Stage;
 
 public class RSSReader extends Application {
 	
-	WebView webView;
+	WebView webView = new WebView();
 	List<Post> posts = new ArrayList<>();
 	GridPane menu = new GridPane();
-	TextField feedInput = new TextField();;
+	TextField feedInput = new TextField();
+	FlowPane postHeader = new FlowPane();
+	Label postHeaderLabel = new Label("Site - Title - Date");
 	
+	@Override
 	public void start(Stage primaryStage) {
-        primaryStage.setTitle("JavaFX WebView Example");
-        webView = new WebView();
+		primaryStage.setTitle("JavaFX WebView Example");
 		
 		try (Scanner sc = new Scanner(new File(".myfeed"))) {
 			while (sc.hasNextLine()) posts.addAll(fetchFeed(sc.nextLine()));
@@ -59,9 +61,12 @@ public class RSSReader extends Application {
 
 		ScrollPane scrollMenu = new ScrollPane();
 		scrollMenu.setContent(menu);
+
+		postHeader.getChildren().add(postHeaderLabel);
+		VBox postView = new VBox(postHeader, webView);
 		
 		SplitPane splitPane = new SplitPane();
-		splitPane.getItems().addAll(scrollMenu, webView);
+		splitPane.getItems().addAll(scrollMenu, postView);
 		
 		VBox vbox = new VBox(getAddFeedPane(), splitPane);
 		
@@ -69,11 +74,11 @@ public class RSSReader extends Application {
 
         primaryStage.setScene(scene);
         primaryStage.show();
-    }
+	}
 	
 	private FlowPane getAddFeedPane() {
 		Label addLabel = new Label("Add feed:");
-		feedInput.setPrefColumnCount(60);
+		feedInput.setPrefColumnCount(40);
 		feedInput.setOnKeyPressed(ke -> handleNewFeed(ke));
 		Button addButton = new Button("ADD");
 		addButton.setOnAction(action -> handleNewFeed(null));
@@ -132,7 +137,7 @@ public class RSSReader extends Application {
 				if (date == null) date = new Date();
 				post.date = date;
 				Hyperlink link = new Hyperlink(entry.getTitle() + " - " + date);
-				link.setOnAction(e -> updateWebView(post.content));
+				link.setOnAction(e -> showPost(post));
 				post.linkToContent = link;
 				listPost.add(post);
             }
@@ -142,9 +147,18 @@ public class RSSReader extends Application {
         }
 		
 		return listPost;
-    }
+	}
 	
-	public void updateWebView(String content) {
+	private void showPost(Post post) {
+		updatePostHeader(post);
+		updateWebView(post.content);
+	}
+	
+	private void updatePostHeader(RSSReader.Post post) {
+		postHeaderLabel.setText(post.siteTitle + " - " + post.postTitle + " - " + post.date);
+	}
+
+	private void updateWebView(String content) {
 		webView.getEngine().loadContent(content);
 	}
 	

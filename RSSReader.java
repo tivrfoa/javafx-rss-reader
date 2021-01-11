@@ -27,7 +27,7 @@ import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 
 import javafx.application.Application;
-import javafx.collections.ObservableList;
+import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -45,7 +45,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
-import javafx.scene.web.WebHistory.Entry;
 import javafx.stage.Stage;
 
 public class RSSReader extends Application {
@@ -57,11 +56,13 @@ public class RSSReader extends Application {
 	FlowPane postHeader = new FlowPane();
 	Label postHeaderLabel = new Label("Site - Title - Date");
 	Post currentPost;
-	boolean isShowingFeedPost;
+	List<String> urlHistory = new ArrayList<>();
+	int historyIndex = -1;
 	
 	@Override
 	public void start(Stage primaryStage) {
 		primaryStage.setTitle("JavaFX WebView Example");
+		addHistoryListener();
 		
 		try (Scanner sc = new Scanner(new File(".myfeed"))) {
 			while (sc.hasNextLine()) posts.addAll(fetchFeed(sc.nextLine()));
@@ -88,6 +89,29 @@ public class RSSReader extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 	}
+
+	private void addHistoryListener() {
+		final WebHistory history = webView.getEngine().getHistory();
+        history.getEntries().addListener(
+            (ListChangeListener.Change<? extends WebHistory.Entry> c) -> {
+                c.next();
+                c.getRemoved().stream().forEach((e) -> {
+					System.out.println("----------------- Removed url: " + e.getUrl());
+				});
+				c.getAddedSubList().stream().forEach((e) -> {
+					System.out.println("+++++++++++++++++ Added url: " + e.getUrl());
+					if (historyIndex == -1 && !urlHistory.isEmpty() &&
+							!urlHistory.get(0).equals(e.getUrl())) {
+						System.out.println("Clearing history ...");
+						urlHistory.clear();
+					}
+					if (!urlHistory.contains(e.getUrl())) {
+						urlHistory.add(e.getUrl());
+						++historyIndex;
+					}
+				});
+        });
+	}
 	
 	private FlowPane getAddFeedPane() {
 		Label addLabel = new Label("Add feed:");
@@ -103,37 +127,25 @@ public class RSSReader extends Application {
 	}
 
 	private void handlePreviousPage() {
-		WebHistory webHistory = webView.getEngine().getHistory();
-		assert debugHistory(webHistory);
-		if (webHistory.getEntries().size() == 0) return;
-		if (webHistory.getCurrentIndex() == 0) {
+		System.out.println(urlHistory);
+		if (urlHistory.isEmpty() || historyIndex == -1) return;
+		if (historyIndex == 0) {
 			showPost();
 		} else {
-			webHistory.go(-1);
+			loadUrl(urlHistory.get(historyIndex - 1));
 		}
+		--historyIndex;
 	}
 
 	private void handleNextPage() {
-		WebHistory webHistory = webView.getEngine().getHistory();
-		assert debugHistory(webHistory);
-		ObservableList<Entry> entries = webHistory.getEntries();
-		if (webHistory.getCurrentIndex() + 1 >= entries.size()) return;
-		if (isShowingFeedPost) {
-			isShowingFeedPost = false;
-			webView.getEngine().load(entries.get(0).getUrl());
-		} else {
-			webHistory.go(1);
-		}
+		System.out.println(urlHistory);
+		if (urlHistory.isEmpty() || historyIndex + 1 >= urlHistory.size()) return; // TODO == should work ...
+		++historyIndex;
+		loadUrl(urlHistory.get(historyIndex));
 	}
 
-	private boolean debugHistory(WebHistory history) {
-		System.out.println("history.getCurrentIndex() = " + history.getCurrentIndex());
-		System.out.println("history.getEntries().size() = " + history.getEntries().size());
-		ObservableList<Entry> entries = history.getEntries();
-		for (var e : entries) {
-			System.out.println(e);
-		}
-		return true;
+	private void loadUrl(String url) {
+		webView.getEngine().load(url);
 	}
 
 	private void handleNewFeed(KeyEvent ke) {
@@ -202,7 +214,6 @@ public class RSSReader extends Application {
 
 	private void showPost() {
 		if (currentPost == null) return;
-		isShowingFeedPost = true;
 		updatePostHeader(currentPost);
 		updateWebView(currentPost.content);
 	}
